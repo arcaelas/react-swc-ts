@@ -1,7 +1,7 @@
 import { type User as IAuth, onAuthStateChanged as watchSession, signOut as SignOut, signInWithPhoneNumber, updateProfile, PhoneAuthProvider } from "firebase/auth"
 import { promify } from "@arcaelas/utils"
 import { auth, reCaptcha } from "~/services/Firebase"
-import EventBucket from "./EventBucket"
+import EventListener from "./EventListener"
 import React from "react"
 import State from "./State"
 
@@ -20,7 +20,7 @@ export interface User {
 
 
 const session = promify(),
-    _listeners = new EventBucket()
+    _listeners = new EventListener()
 let provider = null as null | IAuth,
     user = null as null | User;
 watchSession(auth, state => {

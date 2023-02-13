@@ -13,12 +13,12 @@ export type IState<S> = S extends never | null | undefined ? NonNullable<S> : (
 	)
 )
 
-
 export default interface State<S extends null | any[] | IObject = IObject> {
 	(): [ IState<S>, DispatchState<S> ]
 	onChange(handler: Listener<S>, validator?: Noop<[ IState<S>, IState<S> ], boolean>): ()=> void
 	set(state: DispatchParam<S>): void
 }
+
 /**
  * @description Use this function to create a data store that can be called from any component,
  * this store can be updated even from outside a React component.
