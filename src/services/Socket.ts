@@ -39,3 +39,13 @@ export default class Socket {
 		return Socket.all[`${ protocols }+${ url }`] ||= new Socket(url, protocols)
 	}
 }
+
+
+
+
+const socket = useSocket('clients')
+
+socket.on()
+socket.ping()
+socket.emit()
+socket.error()

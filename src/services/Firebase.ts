@@ -17,7 +17,6 @@ export const messaging = getMessaging(firebase)
 auth.useDeviceLanguage()
 auth.setPersistence(indexedDBLocalPersistence)
 
-
 export const reCaptcha = promify<{
     widgetID: number
     widget: RecaptchaVerifier
