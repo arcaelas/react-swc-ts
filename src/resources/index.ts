@@ -1,5 +1,5 @@
 import React from 'react'
-import { merge } from '@arcaelas/utils'
+import merge from 'lodash/merge'
 import Socket from "~/services/Socket"
 import State, { type IState, type DispatchState } from "~/services/State"
 

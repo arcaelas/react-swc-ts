@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { getDatabase } from 'firebase/database'
 import { getFirestore } from 'firebase/firestore'
 import { getMessaging } from 'firebase/messaging'
-import { Promify, promify, sleep } from '@arcaelas/utils'
+import { promify } from '@arcaelas/utils'
 import { indexedDBLocalPersistence, getAuth, RecaptchaVerifier } from 'firebase/auth'
 
 export const firebase = initializeApp({

@@ -5,10 +5,11 @@ export default class Socket {
 	constructor(url: string | URL, protocols?: string | string[]){
 		this.socket = new WebSocket(url, protocols)
 		this.interval = setInterval(this.ping.bind(this), 15000)
-		this.socket.addEventListener('error', ()=>clearInterval(this.interval))
+		this.error(()=>clearInterval(this.interval))
 		this.socket.addEventListener('close', ()=>clearInterval(this.interval))
 	}
-	private ping(){
+
+	ping(){
 		try {
 			this.socket.send('ping')
 		} catch (error) {}
@@ -31,21 +32,19 @@ export default class Socket {
 		this.socket.send(input)
 	}
 
+	emit(message: string | ArrayBufferLike | Blob | ArrayBufferView){
+		return this.message( message )
+	}
+
 	json(input: string | IObject){
 		return this.message(JSON.stringify( input ))
+	}
+
+	error(handler: Noop<[ error: Event ]>){
+		return this.socket.addEventListener('error', handler)
 	}
 
 	static static(url: string, protocols?: string | string[]): Socket {
 		return Socket.all[`${ protocols }+${ url }`] ||= new Socket(url, protocols)
 	}
 }
-
-
-
-
-const socket = useSocket('clients')
-
-socket.on()
-socket.ping()
-socket.emit()
-socket.error()

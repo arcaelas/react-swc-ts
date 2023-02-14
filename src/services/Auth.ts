@@ -16,73 +16,21 @@ interface IUser {
 }
 
 interface LoginResult {
-    user: null | User
+    user: null | IUser
     status:
     Noop<[], boolean> & { type?: "USER:INVALID" | "PASSWORD:INVALID" } |
     Noop<[code: string], boolean> & { type?: "MFA" | "USER:UNCONFIRMED" } |
     Noop<[code: string, password: string], boolean> & { type?: "PASSWORD:RECOVERY" }
 }
 
-export class User {
-    [K: string]: any
-    role: IUser['role'] = "feligres"
-
-    private $json = ["parroquia"]
-    private $attrs: string[] = []
-    private $custom: string[] = []
-    private $user: CognitoUser = null as any
-
-    constructor(user: CognitoUser) {
-        this.serialize(user)
-    }
-
-    private sync(user: CognitoUser): this
-    private sync(user: any) {
-        for (const key of this.$attrs) delete this[key]
-        this.$user = user
-        this.$attrs = this.$custom = []
-        for (const prop of user.attributes) {
-            let [, custom, key] = prop.Name.replace('sub', 'id').match(/^(custom:)?(\w+)/)
-            this.$attrs.push(key)
-            if (custom) this.$custom.push(key)
-            this[key] = this.$json.includes(key) ? JSON.parse(prop.Value) : prop.Value
-        }
-        return this
-    }
-
-    public handler<T extends Noop<[user: CognitoUser]> = any>(cb: T): ReturnType<T> {
-        return cb(this.$user)
-    }
-
-    public is(role: string | RegExp) {
-        return new RegExp(role).test(this.role)
-    }
-
-    async update(props: User) {
-        const object = {} as IObject
-        for (const key in props) {
-            object[
-                this.$custom.includes(key) ? "custom:" + key : key
-            ] = this.$json.includes(key) ? JSON.stringify(props[key]) : props[key]
-        }
-        await Auth.updateUserAttributes(this.$user, object)
-        return await this.sync(
-            await Auth.currentAuthenticatedUser({ bypassCache: true })
-        )
-    }
-
-    public toJSON() {
-        return this.$attrs.reduce((o, k) => ({ ...o, [k]: this[k] }), {} as IUser)
-    }
-}
-
 let user: IUser | null = null
 const channel = new EventListener(),
     json: string[] = ['parroquia'],
-    custom = json.concat('role', 'parroquia')
+    custom = json.concat('role')
 
-Hub.listen('auth', async ({ payload: { event } }) => {
-    switch (event) {
+Hub.listen('auth', async (event) => {
+    console.log("AuthEvent:", event)
+    switch (event.payload.event) {
         case 'signIn':
         case 'signUp':
         case 'autoSignIn':
@@ -104,32 +52,50 @@ type FnOutput<I extends FnInput> = I extends (a: any, ...b: infer T) => Promise<
     )
 export function onAuthStateReady<H extends FnInput>(callback: H): FnOutput<H>
 export function onAuthStateReady(handler: any) {
-    return async (...params: any) => {
-        return handler(
-            await Auth.currentAuthenticatedUser().catch(() => null), ...params
-        )
-    }
+    return async (...params: any) =>
+        Auth.currentAuthenticatedUser({ bypassCache: true })
+            .catch(() => null)
+            .then(u => handler(u, ...params))
 }
 
 export const onAuthStateChanged = (handler: Noop<[IUser | null]>) => channel.on('auth_changed', handler)
 
-export async function getUser(bypassCache: boolean = false) {
-    const auth = await Auth.currentAuthenticatedUser({ bypassCache })
-    return user = auth.attributes.reduce((a: any, prop: any) => {
-        const key = prop.Name.replace('sub', 'id').replace(/^(custom:)?(\w+)/, "$1")
-        a[key] = json.includes(key) ? JSON.parse(prop.Value) : prop.Value
-        return a
-    }, {} as IUser)
+function serialize(attrs: IObject, isCognito?: boolean) {
+    const object: IObject = {}
+    if (isCognito) {
+        for (const key in attrs) {
+            let value
+            try { value = json.includes(key) ? JSON.parse(attrs[key]) : attrs[key] } catch (error) { value = null }
+            object[
+                key.replace(/^custom:(\w+)/, "$1")
+            ] = value
+        }
+    } else {
+        delete attrs.sub
+        for (const key in attrs) {
+            object[
+                (custom.includes(key) ? 'custom:' : '') + key
+            ] = JSON.stringify(attrs[key])
+        }
+    }
+    return object
 }
 
-export async function signUp({ email, password, ...attr }: User) {
-    const { user } = await Auth.signUp({
-        username: email,
+export async function getUser(bypassCache = false) {
+    const auth = await Auth.currentAuthenticatedUser({ bypassCache })
+    return user = serialize(
+        auth.attributes.reduce((o: IUser, { Name, Value }: IObject) => ({ ...o, [Name]: Value }), {}), true
+    ) as IUser
+}
+
+export async function signUp({ email: username, password, ...attr }: IUser) {
+    await Auth.signUp({
+        username,
         password,
-        attributes: { email, ...attr },
         autoSignIn: { enabled: true },
+        attributes: { email: username, ...serialize(attr) },
     })
-    return user
+    return await getUser()
 }
 
 export async function signInWith(name: keyof typeof CognitoHostedUIIdentityProvider) {
@@ -139,7 +105,7 @@ export async function signInWith(name: keyof typeof CognitoHostedUIIdentityProvi
     console.log({ response })
 }
 
-export async function signIn(object: User & { password: string }): Promise<LoginResult>
+export async function signIn(object: IUser): Promise<LoginResult>
 export async function signIn(email: string, password: string): Promise<LoginResult>
 export async function signIn(...props: any) {
     const result: LoginResult = { status: null as any, user: null },
@@ -207,16 +173,8 @@ export async function signOut(global?: boolean) {
 
 export const update = onAuthStateReady(async (auth, props: IUser) => {
     if (!auth) throw new Error("El usuario no está autenticado.")
-    const json = ['parroquia'],
-        object: IObject = {},
-        custom = json.concat("role")
-    for (let key in props) {
-        object[
-            custom.includes(key) ? "custom:" + key : key
-        ] = json.includes(key) ? JSON.stringify(props[key]) : props[key]
-    }
-    await Auth.updateUserAttributes(auth, object)
-    return await getUser(true)
+    await Auth.updateUserAttributes(auth, serialize(props))
+    return getUser(true)
 })
 
 export function useAuth() {
@@ -225,6 +183,6 @@ export function useAuth() {
         channel.once('auth_changed', auth =>
             setState(auth)
         )
-    ,[ setState ])
+        , [setState])
     return state
 }
