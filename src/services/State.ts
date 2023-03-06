@@ -1,5 +1,6 @@
 import React from 'react'
-import { clone, merge } from '@arcaelas/utils'
+import merge from 'lodash/merge'
+import { clone } from '@arcaelas/utils'
 
 export type Listener<S> = Noop<[ IState<S>, IState<S> ]>
 export type DispatchState<S> = (state: DispatchParam<S>)=> void

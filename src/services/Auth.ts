@@ -22,6 +22,7 @@ type FnOutput<I extends FnInput> = I extends (a: any, ...b: infer T) => Promise<
 
 interface LoginResult {
     user: null | IUser
+    user: null | IUser
     status:
     Noop<[], boolean> & { type?: "USER:INVALID" | "PASSWORD:INVALID" } |
     Noop<[code: string], boolean> & { type?: "MFA" | "USER:UNCONFIRMED" } |
@@ -47,11 +48,10 @@ Hub.listen('auth', async ({ payload: { event } }) => {
 
 export function onAuthStateReady<H extends FnInput>(callback: H): FnOutput<H>
 export function onAuthStateReady(handler: any) {
-    return async (...params: any) => {
-        return handler(
-            await Auth.currentAuthenticatedUser().catch(() => null), ...params
-        )
-    }
+    return async (...params: any) =>
+        Auth.currentAuthenticatedUser({ bypassCache: true })
+            .catch(() => null)
+            .then(u => handler(u, ...params))
 }
 export const onAuthStateChanged = (handler: Noop<[IUser | null]>) => channel.on('auth_changed', handler)
 
@@ -69,9 +69,10 @@ export async function signUp({ email, password, ...attr }: IUser) {
     await Auth.signUp({
         username: email,
         password,
-        attributes: { email, ...attr },
         autoSignIn: { enabled: true },
+        attributes: { email: username, ...serialize(attr) },
     })
+    return await getUser()
     return await getUser()
 }
 
@@ -150,16 +151,8 @@ export async function signOut(global?: boolean) {
 
 export const update = onAuthStateReady(async (auth, props: IUser) => {
     if (!auth) throw new Error("El usuario no está autenticado.")
-    const json = ['parroquia'],
-        object: IObject = {},
-        custom = json.concat("role")
-    for (let key in props) {
-        object[
-            custom.includes(key) ? "custom:" + key : key
-        ] = json.includes(key) ? JSON.stringify(props[key]) : props[key]
-    }
-    await Auth.updateUserAttributes(auth, object)
-    return await getUser(true)
+    await Auth.updateUserAttributes(auth, serialize(props))
+    return getUser(true)
 })
 
 export function useAuth() {
@@ -168,6 +161,6 @@ export function useAuth() {
         channel.once('auth_changed', auth =>
             setState(auth)
         )
-    ,[ setState ])
+        , [setState])
     return state
 }
