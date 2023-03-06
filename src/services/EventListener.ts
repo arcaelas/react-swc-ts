@@ -22,7 +22,7 @@ export default class EventListener {
         return unbind = this.on(event, bind)
     }
 
-    emit(event: string, ...params: any[]){
+    emit(event: EventType, ...params: any[]){
         if( params.length === 1 && params[ 0 ] instanceof Error ){
             if( params[0]['stopPropagation' as 'message'] ) return true
             else params[0]['stopPropagation' as 'message'] = true as any

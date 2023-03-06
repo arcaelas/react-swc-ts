@@ -1,4 +1,5 @@
 import { createBrowserRouter} from "react-router-dom";
+import View from "~/views";
 
 /* 
     Home > /
@@ -18,5 +19,9 @@ import { createBrowserRouter} from "react-router-dom";
     Profile > /account
 */
 export default createBrowserRouter([
+    {
+        path: "/",
+        element: <View />,
+    },
     
 ])

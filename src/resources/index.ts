@@ -1,6 +1,5 @@
 import React from 'react'
 import { merge } from '@arcaelas/utils'
-import Socket from "~/services/Socket"
 import State, { type IState, type DispatchState } from "~/services/State"
 
 interface Signal {
@@ -45,30 +44,6 @@ export function useSignal(key: string): Signal {
 		},
 	}
 }
-
-/**
- * @description
- * useSocket allows you to create a WebSocket instance to manipulate connections within your components.
- * @example
- * export function AccountBalance({ value }){
- * 	const [ balance, setBalance ] = React.useState( value )
- * 	const socket = useSocket('wss://url')
- * 	
- * 	React.useEffect(()=>{
- * 		const unbind = socket.message((payload)=>{
- * 			if(payload.type === 'balance_changed'){
- * 				setBalance(payload.value)
- * 			}
- * 		})
- * 		return unbind
- * 	}, [ socket, setBalance ])
- * 
- * 	return <div>
- * 		Current Balance: { balance }
- * 	</div>
- * }
- */
-export const useSocket = (url: string, protocols?: string | string[])=> Socket.static(url, protocols)
 
 /**
  * @description
