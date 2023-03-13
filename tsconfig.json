@@ -3,9 +3,6 @@
     "src",
     "vite.config.ts"
   ],
-  "exclude":[
-    "src/AmplifyAuth.ts"
-  ],
   "compilerOptions": {
     "baseUrl": ".",
     "strict": true,
